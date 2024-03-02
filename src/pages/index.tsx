@@ -26,6 +26,25 @@ const CreatePostWizard = () => {
     </div>
   );
 };
+const PostLoader = () => {
+  return (
+    <div className="mx-auto w-full rounded-md border border-blue-300 p-4 shadow">
+      <div className="flex animate-pulse space-x-4">
+        <div className="h-10 w-10 rounded-full bg-slate-700"></div>
+        <div className="flex-1 space-y-6 py-1">
+          <div className="h-2 rounded bg-slate-700"></div>
+          <div className="space-y-3">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="col-span-2 h-2 rounded bg-slate-700"></div>
+              <div className="col-span-1 h-2 rounded bg-slate-700"></div>
+            </div>
+            <div className="h-2 rounded bg-slate-700"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 type PostWithUser = RouterOutputs["post"]["getAll"][number];
 const PostView = (props: PostWithUser) => {
@@ -50,10 +69,30 @@ const PostView = (props: PostWithUser) => {
   );
 };
 
+const Feed = () => {
+  const { data, isLoading: postsLoading } = api.post.getAll.useQuery();
+
+  if (postsLoading) return <PostLoader />;
+  if (!data) return <div>Something went wrong</div>;
+
+  return (
+    <div className="flex flex-col">
+      {data.map((fullPost) => (
+        <PostView {...fullPost} key={fullPost.post.id} />
+      ))}
+    </div>
+  );
+};
+
 export default function Home() {
-  const user = useUser();
-  const { data, isLoading } = api.post.getAll.useQuery();
-  if (!data || isLoading) return <div>Loading...</div>;
+  const { isLoaded: userLoaded, isSignedIn } = useUser();
+
+  // Begin fetching early, so we can use cached data in the Feed
+  api.post.getAll.useQuery();
+
+  // Usually the user will be loaded before the posts, so this case should not last long
+  if (!userLoaded) return <div />;
+
   return (
     <>
       <Head>
@@ -64,13 +103,9 @@ export default function Home() {
       <main className="flex h-screen justify-center">
         <div className="h-full w-full border-x border-slate-400 md:max-w-2xl">
           <div className="flex border-b border-slate-400 p-4">
-            {user.isSignedIn ? <CreatePostWizard /> : <SignInButton />}
+            {isSignedIn ? <CreatePostWizard /> : <SignInButton />}
           </div>
-          <div className="flex flex-col">
-            {data.map((fullPost) => (
-              <PostView {...fullPost} key={fullPost.post.id} />
-            ))}
-          </div>
+          <Feed />
         </div>
       </main>
     </>
