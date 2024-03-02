@@ -3,12 +3,24 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import Head from "next/head";
 import Image from "next/image";
+import { useState } from "react";
 import { api, type RouterOutputs } from "~/utils/api";
 dayjs.extend(relativeTime);
 
 const CreatePostWizard = () => {
   const { user } = useUser();
+  const [input, setInput] = useState("");
+
   if (!user) return null;
+
+  const ctx = api.useContext();
+
+  const { mutate, isLoading: isPosting } = api.post.create.useMutation({
+    onSuccess: () => {
+      setInput("");
+      void ctx.post.getAll.invalidate();
+    },
+  });
 
   return (
     <div className="flex w-full gap-3 ">
@@ -22,7 +34,23 @@ const CreatePostWizard = () => {
       <input
         placeholder="What's on your mind?"
         className="grow bg-transparent outline-none"
+        value={input}
+        type="text"
+        onChange={(e) => setInput(e.target.value)}
+        disabled={isPosting}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            const content = input;
+            if (content) {
+              mutate({ content: input.trim() });
+              setInput("");
+            }
+          }
+        }}
       />
+      {!!input.length && (
+        <button onClick={() => mutate({ content: input.trim() })}>Post</button>
+      )}
     </div>
   );
 };
