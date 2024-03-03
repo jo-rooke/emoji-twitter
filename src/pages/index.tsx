@@ -4,6 +4,7 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import Head from "next/head";
 import Image from "next/image";
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { api, type RouterOutputs } from "~/utils/api";
 dayjs.extend(relativeTime);
 
@@ -20,6 +21,11 @@ const CreatePostWizard = () => {
       setInput("");
       void ctx.post.getAll.invalidate();
     },
+    onError: (e) => {
+      const errorMessage = e.data?.zodError?.fieldErrors.content;
+      if (errorMessage?.[0]) toast.error(errorMessage[0]);
+      else toast.error("Failed to post");
+    },
   });
 
   return (
@@ -32,7 +38,7 @@ const CreatePostWizard = () => {
         className="h-16 w-16 rounded-full"
       />
       <input
-        placeholder="What's on your mind?"
+        placeholder="Type some emojis!"
         className="grow bg-transparent outline-none"
         value={input}
         type="text"
