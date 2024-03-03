@@ -1,5 +1,7 @@
 import { clerkClient, type User } from "@clerk/nextjs/server";
 import { TRPCError } from "@trpc/server";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 import { z } from "zod";
 import {
   createTRPCRouter,
@@ -14,6 +16,18 @@ const filterUserFromClient = (user: User) => {
     profilePicture: user.imageUrl,
   };
 };
+
+// {
+//   redis: Redis.fromEnv(),
+//   limiter: Ratelimit.slidingWindow(3, "1 m"),
+//   analytics: true,
+// }
+
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(3, "1 m"),
+  analytics: true,
+});
 
 export const postRouter = createTRPCRouter({
   getAll: publicProcedure.query(async ({ ctx }) => {
@@ -55,6 +69,15 @@ export const postRouter = createTRPCRouter({
     .input(z.object({ content: z.string().emoji().min(1).max(255) }))
     .mutation(async ({ ctx, input }) => {
       const authorId = ctx.currentUserId;
+
+      const { success } = await ratelimit.limit(authorId);
+
+      if (!success) {
+        throw new TRPCError({
+          message: "Rate limit exceeded",
+          code: "TOO_MANY_REQUESTS",
+        });
+      }
 
       const post = await ctx.db.post.create({
         data: {
