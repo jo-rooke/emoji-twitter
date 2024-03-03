@@ -48,14 +48,19 @@ const CreatePostWizard = () => {
           if (e.key === "Enter") {
             const content = input;
             if (content) {
-              mutate({ content: input.trim() });
+              !!input.trim().length && mutate({ content: input.trim() });
               setInput("");
             }
           }
         }}
       />
       {!!input.length && (
-        <button onClick={() => mutate({ content: input.trim() })}>Post</button>
+        <button
+          onClick={() => mutate({ content: input.trim() })}
+          disabled={isPosting || !!input.trim().length}
+        >
+          Post
+        </button>
       )}
     </div>
   );
